@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.cluster import KMeans
 from sklearn.model_selection import (
     GridSearchCV,
     train_test_split,
@@ -488,14 +489,30 @@ def data_preprocessing(X, X_test):
     return X, X_test
 
 
+def apply_k_means(X, X_test):
+
+    frames = [X, X_test]
+    all_data = pd.concat(frames)
+
+    kmeans = KMeans(n_clusters=30, init="k-means++", random_state=42)
+    y_kmeans = kmeans.fit_predict(all_data)
+
+    all_data["kmeans"] = y_kmeans
+
+    X = all_data.iloc[:891, :]
+    X_test = all_data.iloc[891:, :]
+
+    return X, X_test
+
+
 def hyperparams_selection(X, y):
 
     grid_params = {
-        "n_estimators": range(340, 341, 5),
+        "n_estimators": range(355, 360, 5),
         "criterion": ["gini"],  # ,"entropy"]
-        "max_depth": range(10, 13, 1),
-        "max_features": range(10, 13, 1),
-        "max_leaf_nodes": range(18, 20, 1),
+        "max_depth": range(10, 11, 1),
+        "max_features": range(19, 21, 1),
+        "max_leaf_nodes": range(16, 17, 1),
     }
 
     model_grid = GridSearchCV(
@@ -520,9 +537,9 @@ def hyperparams_selection(X, y):
 
 def model(X, y, best_parameters):
 
-    RF_model = RandomForestClassifier(**best_parameters)
+    rf_model = RandomForestClassifier(**best_parameters)
 
-    return RF_model.fit(X, y)
+    return rf_model.fit(X, y)
 
 
 def save_Y_test_pred(model, X_test):
@@ -539,13 +556,13 @@ def Titanic_RF():
 
     X, X_test = data_preprocessing(X, X_test)
 
-    RF_hyperparams = hyperparams_selection(X, y)
+    X, X_test = apply_k_means(X, X_test)
 
-    RF_model = model(X, y, RF_hyperparams)
+    rf_hyperparams = hyperparams_selection(X, y)
 
-    pred_file = save_Y_test_pred(RF_model, X_test)
+    rf_model = model(X, y, rf_hyperparams)
 
-    return pred_file
+    pred_file = save_Y_test_pred(rf_model, X_test)
 
 
 if __name__ == "__main__":
